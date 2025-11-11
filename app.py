@@ -467,67 +467,21 @@ elif page == "Drug Discovery Lab 💊":
 
 # --------------------------- VR HEADSET MODE ---------------------------
 elif page == "VR Headset Mode 🕶️":
-    st.subheader("Immersive VR Headset Mode — 3D Compound Visualization")
-    st.markdown("""
-    Open this page over **HTTPS** in a VR-capable browser (e.g., Oculus Browser or Chrome + WebXR).  
-    You can look around, move within the virtual space, and click on spheres to see compound data.
-    """)
-
-    # Retrieve last compound results (or generate sample data)
-    if "df_cmp" in st.session_state and not st.session_state.df_cmp.empty:
-        df_vr = st.session_state.df_cmp.copy()
-    else:
-        st.warning("No compound data found — loading sample compounds for demo.")
-        df_vr = pd.DataFrame([
-            {"Compound": "Aspirin", "Binding": -8.1, "Solubility": 0.85, "Toxicity": 0.12, "Efficacy": 70, "StrokeReduction": 35, "Confidence": 90},
-            {"Compound": "Clopidogrel", "Binding": -10.2, "Solubility": 0.65, "Toxicity": 0.18, "Efficacy": 78, "StrokeReduction": 40, "Confidence": 93},
-            {"Compound": "Edaravone", "Binding": -9.3, "Solubility": 0.9, "Toxicity": 0.22, "Efficacy": 82, "StrokeReduction": 45, "Confidence": 95},
-        ])
-
-    import json
-    data_json = json.dumps(df_vr.to_dict(orient="records"))
-
-    vr_html = f"""
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <a-scene vr-mode-ui="enabled:true" embedded background="color:#ECECEC">
-      <a-entity light="type: ambient; color: #BBB"></a-entity>
-      <a-entity light="type: directional; intensity: 0.8" position="1 1 0"></a-entity>
-      <a-camera position="0 1.6 6">
-        <a-cursor fuse="false" raycaster="objects:.clickable"></a-cursor>
-      </a-camera>
-
-      <a-entity id="compounds"></a-entity>
-
-      <a-entity position="0 0 -6">
-        <a-text value="Axes: Binding–X, Solubility–Y, Toxicity–Z" color="#222" align="center" width="6"></a-text>
-      </a-entity>
-
-      <script>
-        const data = {data_json};
-        function makeSphere(p,i) {{
-          const container = document.getElementById('compounds');
-          const s = document.createElement('a-sphere');
-          const x = (p.Binding + 12) * 0.5;
-          const y = p.Solubility * 4.0;
-          const z = p.Toxicity * 5.0 - 3.0;
-          const n = Math.max(0.0, Math.min(1.0, p.StrokeReduction / 50.0));
-          const color = `rgb(${{{{parseInt(255*(1-n))}}}},${{{{parseInt(255*n)}}}},0)`;
-          s.setAttribute('class','clickable');
-          s.setAttribute('position',`${{{{x}}}} ${{{{y}}}} ${{{{z}}}}`);
-          s.setAttribute('radius',0.25 + (p.Efficacy / 250.0));
-          s.setAttribute('color', color);
-          s.setAttribute('opacity', 0.9);
-          s.addEventListener('click',()=>{
-            alert(`Compound: ${{{{p.Compound}}}}\\nBinding: ${{{{p.Binding}}}} kcal/mol\\nSolubility: ${{{{p.Solubility}}}}\\nToxicity: ${{{{p.Toxicity}}}}\\nEfficacy: ${{{{p.Efficacy}}}}\\nStroke Reduction: ${{{{p.StrokeReduction}}}}%\\nConfidence: ${{{{p.Confidence}}}}`);
-          });
-          container.appendChild(s);
-        }}
-        window.addEventListener('load',()=>{{ data.forEach(makeSphere); }});
-      </script>
+    st.subheader("VR Headset Mode (Experimental)")
+    st.markdown("Open via HTTPS in a VR-capable browser for immersive exploration.")
+    
+    aframe_html = """
+    <a-scene embedded vr-mode-ui="enabled: true">
+        <a-sky color="#ECECEC"></a-sky>
+        <a-entity light="type: ambient; color: #BBB"></a-entity>
+        <a-entity light="type: directional; intensity: 0.6" position="1 1 0"></a-entity>
+        <a-camera position="0 1.6 0"></a-camera>
+        <a-sphere position="0 1.5 -3" radius="0.5" color="#EF2D5E"></a-sphere>
     </a-scene>
     """
+    
+    html(aframe_html, height=480)
 
-    html(vr_html, height=900)
 
 
 
