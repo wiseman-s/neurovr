@@ -17,7 +17,7 @@ from streamlit.components.v1 import html
 
 # --------------------------- CONFIG ---------------------------
 st.set_page_config(
-    page_title="🧠 NeuroVR Lab — VR Stroke Research & Drug Discovery",
+    page_title=" NeuroVR Lab — VR Stroke Research & Drug Discovery",
     page_icon="🧠",
     layout="wide"
 )
