@@ -275,7 +275,6 @@ elif page == "Patient Data Recorder 🧾":
                 st.success(f"Record {delete_id} deleted from session.")
 
 # --------------------------- DRUG DISCOVERY LAB ---------------------------
-# --------------------------- DRUG DISCOVERY LAB ---------------------------
 elif page == "Drug Discovery Lab 💊":
     st.subheader("Drug Discovery Lab — Professional Compound Evaluation & Comparison")
 
