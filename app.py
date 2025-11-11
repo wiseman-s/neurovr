@@ -276,49 +276,86 @@ elif page == "Patient Data Recorder 🧾":
 
 # --------------------------- DRUG DISCOVERY LAB ---------------------------
 elif page == "Drug Discovery Lab 💊":
-    st.subheader("Drug Discovery Lab — 3D Stroke Risk Interaction")
+    st.subheader("🧪 Drug Discovery & Compound Comparison Lab")
 
-    compound = st.text_input("Compound name", "")
-    binding_energy = st.slider("Binding energy (kcal/mol)", -15.0, 0.0, -8.5)
-    solubility = st.slider("Solubility (0-1)", 0.0, 1.0, 0.5)
-    toxicity = st.slider("Toxicity (0-1)", 0.0, 1.0, 0.1)
+    st.markdown("""
+    Compare how two compounds differ in efficacy, solubility, toxicity, and predicted stroke interaction.
+    Use this to simulate *before vs after modification*, *natural vs synthetic*, or *control vs experimental* compounds.
+    """)
 
-    if st.button("Evaluate"):
-        score = (abs(binding_energy) * solubility * (1 - toxicity)) * 10
-        # stroke_change: lower score -> less effective -> stroke risk increases; we convert to "Stroke Risk" %
-        stroke_risk_pct = np.clip(100 - score, 0, 100)
-        st.success(f"{compound or 'Unnamed'} score: {score:.2f}/100 — Estimated Stroke Risk: {stroke_risk_pct:.1f}%")
+    col1, col2 = st.columns(2)
 
-        # Save compound to session list for multi-compare if user wants
-        st.session_state.compounds.append({
-            "Compound": compound or "Unnamed",
-            "Binding Energy": binding_energy,
-            "Solubility": solubility,
-            "Toxicity": toxicity,
-            "Score": score,
-            "Stroke Risk (%)": stroke_risk_pct
-        })
+    with col1:
+        st.markdown("#### Compound A")
+        compound_a = st.text_input("Name (A)", "Control Compound")
+        binding_a = st.slider("Binding Energy (A) [kcal/mol]", -15.0, 0.0, -8.0, key="bindA")
+        solubility_a = st.slider("Solubility (A)", 0.0, 1.0, 0.5, key="solA")
+        toxicity_a = st.slider("Toxicity (A)", 0.0, 1.0, 0.2, key="toxA")
 
-    # Show session compounds if any
-    if st.session_state.compounds:
-        df_comp = pd.DataFrame(st.session_state.compounds)
-        st.write("### Evaluated Compounds (session)")
-        st.dataframe(df_comp)
+    with col2:
+        st.markdown("#### Compound B")
+        compound_b = st.text_input("Name (B)", "Experimental Drug")
+        binding_b = st.slider("Binding Energy (B) [kcal/mol]", -15.0, 0.0, -10.0, key="bindB")
+        solubility_b = st.slider("Solubility (B)", 0.0, 1.0, 0.7, key="solB")
+        toxicity_b = st.slider("Toxicity (B)", 0.0, 1.0, 0.1, key="toxB")
 
-        # 3D scatter of evaluated compounds (color = Stroke Risk)
+    if st.button("Evaluate Both Compounds"):
+        def compute_score(binding, solubility, toxicity):
+            activity = (abs(binding) / 15) * solubility * (1 - toxicity)
+            return round(activity * 100, 2)
+
+        score_a = compute_score(binding_a, solubility_a, toxicity_a)
+        score_b = compute_score(binding_b, solubility_b, toxicity_b)
+
+        def assess(binding, solubility, toxicity):
+            if binding > -5 or toxicity > 0.6:
+                return "⚠️ High Risk or Ineffective", "red"
+            elif solubility < 0.2:
+                return "⚠️ Poor Solubility", "orange"
+            else:
+                return "✅ Promising Candidate", "green"
+
+        verdict_a, color_a = assess(binding_a, solubility_a, toxicity_a)
+        verdict_b, color_b = assess(binding_b, solubility_b, toxicity_b)
+
+        st.markdown("### 🧩 Results Summary")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric(f"{compound_a}", f"{score_a}/100", help=verdict_a)
+            st.markdown(f"<span style='color:{color_a}'>{verdict_a}</span>", unsafe_allow_html=True)
+        with col2:
+            st.metric(f"{compound_b}", f"{score_b}/100", help=verdict_b)
+            st.markdown(f"<span style='color:{color_b}'>{verdict_b}</span>", unsafe_allow_html=True)
+
+        # --- 3D Visualization (Comparative) ---
+        df3d = pd.DataFrame([
+            {"Compound": compound_a, "Binding Energy": binding_a, "Solubility": solubility_a,
+             "Toxicity": toxicity_a, "Efficacy": score_a},
+            {"Compound": compound_b, "Binding Energy": binding_b, "Solubility": solubility_b,
+             "Toxicity": toxicity_b, "Efficacy": score_b},
+        ])
+
         fig3d = px.scatter_3d(
-            df_comp,
-            x="Binding Energy",
-            y="Solubility",
-            z="Toxicity",
-            color="Stroke Risk (%)",
-            size="Score",
-            hover_name="Compound",
-            title="3D Visualization of Compound Effects on Stroke Risk",
-            color_continuous_scale="RdYlGn_r"
+            df3d,
+            x="Binding Energy", y="Solubility", z="Toxicity",
+            color="Efficacy",
+            symbol="Compound",
+            color_continuous_scale="RdYlGn",
+            title="3D Comparison: Compound Efficacy vs Risk (Stroke Interaction)"
         )
-        fig3d.update_traces(marker=dict(line=dict(width=0)))
+        fig3d.update_traces(marker=dict(size=8, opacity=0.8))
         st.plotly_chart(fig3d, use_container_width=True)
+
+        # 2D Efficacy Comparison
+        fig2d = px.bar(
+            df3d,
+            x="Compound", y="Efficacy",
+            color="Efficacy",
+            color_continuous_scale="RdYlGn",
+            title="2D Efficacy Score Comparison"
+        )
+        st.plotly_chart(fig2d, use_container_width=True)
+
 
 # --------------------------- VR HEADSET MODE ---------------------------
 elif page == "VR Headset Mode 🕶️":
