@@ -1,6 +1,6 @@
 # app.py — NeuroVR Lab v3.5 (full)
 # AI + VR + Drug Discovery + Research Dashboard + Patient Recorder (session-only)
-# System by Simon | mailio@gmail.com
+# System by Simon | allinmer57@gmail.com
 
 import streamlit as st
 import pandas as pd
@@ -461,7 +461,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align:center; color: gray; font-size: 13px;'>
-        🧠 <b>System by Simon</b> | 📧 <a href='allinmer57@gmail.com'>mailio@gmail.com</a><br>
+        🧠 <b>System by Simon</b> | 📧 <a href='allinmer57@gmail.com'>allinmer57@gmail.com</a><br>
         © 2025 NeuroVR Lab — Experimental stroke research environment.
     </div>
     """,
