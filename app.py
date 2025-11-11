@@ -396,8 +396,8 @@ elif page == "Drug Discovery Lab 💊":
                 xpos = i * 1.8 - 1.8
                 a_html += f"""
                   <a-box position="{xpos} 0.25 -3" depth="0.5" height="0.5" width="0.5" color="{color}"></a-box>
-                  <a-text value="{p['Compound']}" align="center" position="{xpos} 1.2 -3" color="#111"></a-text>
-                  <a-text value="Stroke Reduction: {p['StrokeReduction']}%" align="center" position="{xpos} 0.7 -3" color="#333"></a-text>
+                  <a-text value="{p['Compound']}" align="center" position="{xpos} 1.6 -3" color="#111"></a-text>
+                  <a-text value="Stroke Reduction: {p['StrokeReduction']}%" align="center" position="{xpos} 1.25 -3" color="#333"></a-text>
                 """
             a_html += """
               <a-camera position="0 1.6 2"></a-camera>
