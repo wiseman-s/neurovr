@@ -397,26 +397,24 @@ elif page == "Drug Discovery Lab 💊":
     a_html += f"""
       <a-box position="{xpos} 0.25 -3" depth="0.5" height="0.5" width="0.5" color="{color}"></a-box>
       <a-text value="{p['Compound']}" align="center" position="{xpos} 1.2 -3" color="#111"></a-text>
-      <a-text value="Stroke Reduction: {p['StrokeReduction']}%" align="center" position="{xpos} 0.7 -3" color="#333"></a-text>
+      <a-text value="Stroke Reduction: {p['StrokeReduction']}%" align="center" position="{xpos} 1.8 -3" color="#333"></a-text>
     """
 
-    """
+# ✅ Close the scene properly
+a_html += """
+  <a-camera position="0 1.6 2"></a-camera>
+</a-scene>
+"""
 
-    """
+st.markdown("### 🧠 Interactive 3D Compound Display")
+st.components.v1.html(a_html, height=500)
 
-                """
-            a_html += """
-              <a-camera position="0 1.6 2"></a-camera>
-            </a-scene>
-            """
-            st.markdown("### 🧠 Interactive 3D Compound Display")
-            st.components.v1.html(a_html, height=500)
+# --- Export ---
+csv = df_cmp.to_csv(index=False).encode("utf-8")
+excel = export_excel(df_cmp)
+st.download_button("📥 Download Results (CSV)", csv, "compound_results.csv", "text/csv")
+st.download_button("📘 Download Results (Excel)", excel, "compound_results.xlsx")
 
-            # --- Export ---
-            csv = df_cmp.to_csv(index=False).encode("utf-8")
-            excel = export_excel(df_cmp)
-            st.download_button("📥 Download Results (CSV)", csv, "compound_results.csv", "text/csv")
-            st.download_button("📘 Download Results (Excel)", excel, "compound_results.xlsx")
 
     # ---------------- Batch Upload ----------------
     else:
