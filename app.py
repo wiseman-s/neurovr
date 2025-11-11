@@ -279,127 +279,188 @@ elif page == "Drug Discovery Lab 💊":
     st.subheader("Drug Discovery Lab — AI-Guided Compound Efficacy & Risk Visualizer")
 
     st.markdown("""
-    This laboratory simulates how various compounds influence **stroke recovery potential**  
-    using heuristic bioactivity scoring. It integrates **binding energy**, **solubility**, and **toxicity**
-    into a unified model, producing 3D and 2D visuals for professional comparison.
+    This lab allows you to **simulate, compare, and analyze compounds** for stroke-related efficacy.  
+    Use manual mode for two-compound analysis, or upload a CSV to evaluate many compounds automatically.
 
-    **Research Context:**  
-    Stroke compounds often target neuroprotective pathways, clot dissolution, or vascular health.  
-    By comparing two or more compounds, NeuroVR helps researchers identify drug-like molecules
-    with optimal balance between **binding affinity**, **solubility**, and **toxicity**.
+    **CSV Format:**  
+    Columns → `Compound`, `Binding`, `Solubility`, `Toxicity`
     """)
 
-    # --- Commonly studied compounds for stroke recovery ---
-    compound_options = [
-        "Aspirin",
-        "tPA (Tissue Plasminogen Activator)",
-        "Citicoline",
-        "Piracetam",
-        "Memantine",
-        "Edaravone",
-        "Water (control)",
-        "Experimental-X1"
-    ]
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import PatternFill
 
-    st.markdown("#### Select or enter compound properties below")
-    colA, colB = st.columns(2)
+    # Toggle between modes
+    mode = st.radio("Select Mode", ["Manual Comparison", "Batch Upload (CSV)"])
 
-    with colA:
-        st.markdown("##### Compound A")
-        name_a = st.selectbox("Select Compound A", compound_options, index=0, key="cmp_a")
-        bind_a = st.number_input("Binding Energy (A) [kcal/mol, negative stronger]", -20.0, 0.0, -8.0, step=0.1, key="bind_a")
-        sol_a = st.slider("Solubility (A) (0–1)", 0.0, 1.0, 0.5, key="sol_a")
-        tox_a = st.slider("Toxicity (A) (0–1)", 0.0, 1.0, 0.2, key="tox_a")
-
-    with colB:
-        st.markdown("##### Compound B")
-        name_b = st.selectbox("Select Compound B", compound_options, index=1, key="cmp_b")
-        bind_b = st.number_input("Binding Energy (B) [kcal/mol, negative stronger]", -20.0, 0.0, -10.0, step=0.1, key="bind_b")
-        sol_b = st.slider("Solubility (B) (0–1)", 0.0, 1.0, 0.6, key="sol_b")
-        tox_b = st.slider("Toxicity (B) (0–1)", 0.0, 1.0, 0.1, key="tox_b")
-
+    # --- Helper evaluation function ---
     def evaluate_compound(binding, solubility, toxicity):
         reasons = []
-
-        # Normalize values to biologically relevant scales
-        binding_strength = ( -binding - 5 ) / (12 - 5)
-        binding_strength = np.clip(binding_strength, 0.0, 1.0)
-
-        sol_factor = np.clip(solubility, 0.0, 1.0)
-        tox_penalty = np.clip(toxicity, 0.0, 1.0)
+        binding_strength = np.clip((-binding - 5) / 7, 0, 1)
+        sol_factor = np.clip(solubility, 0, 1)
+        tox_penalty = np.clip(toxicity, 0, 1)
 
         if binding > -5:
-            reasons.append("Weak target binding (< -5 kcal/mol).")
+            reasons.append("Weak binding (< -5 kcal/mol).")
         if sol_factor < 0.25:
-            reasons.append("Low solubility — poor bioavailability expected.")
+            reasons.append("Low solubility — poor bioavailability.")
         if tox_penalty > 0.6:
-            reasons.append("High toxicity — potential safety risk.")
+            reasons.append("High toxicity — safety concern.")
 
-        # Composite “drug-likeness” surrogate score
-        raw_score = (0.55 * binding_strength) + (0.3 * sol_factor) + (0.15 * (1 - tox_penalty))
-        raw_score = np.clip(raw_score, 0.0, 1.0)
+        raw_score = 0.55 * binding_strength + 0.3 * sol_factor + 0.15 * (1 - tox_penalty)
         efficacy = round(raw_score * 100, 2)
         reduction = round(raw_score * 50, 2)
         confidence = int(np.clip(binding_strength * 60 + sol_factor * 30 + (1 - tox_penalty) * 10, 5, 100))
 
-        # Handle inert materials like water
         if binding_strength < 0.05 and sol_factor > 0.4 and tox_penalty < 0.1:
-            reasons.append("Profile matches inert or non-pharmacological substance.")
+            reasons.append("Profile resembles an inert substance (e.g., water).")
 
         return efficacy, reduction, confidence, reasons
 
-    if st.button("Run Compound Evaluation"):
-        a_eff, a_red, a_conf, a_reasons = evaluate_compound(bind_a, sol_a, tox_a)
-        b_eff, b_red, b_conf, b_reasons = evaluate_compound(bind_b, sol_b, tox_b)
+    # --- Excel export helper ---
+    def export_excel(df):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Drug Discovery Results"
 
-        # Display results side-by-side
-        col1, col2 = st.columns(2)
-        for (name, eff, red, conf, reasons, col) in [
-            (name_a, a_eff, a_red, a_conf, a_reasons, col1),
-            (name_b, b_eff, b_red, b_conf, b_reasons, col2)
-        ]:
-            with col:
-                st.markdown(f"### {name}")
-                st.metric("Efficacy Score", f"{eff}/100")
-                st.metric("Predicted Stroke Reduction", f"{red}%")
-                st.metric("Confidence", f"{conf}/100")
-                if reasons:
-                    st.warning(" • " + "\n • ".join(reasons))
+        # Write headers
+        ws.append(list(df.columns))
 
-        # --- DataFrame for visualization ---
-        df_cmp = pd.DataFrame([
-            {"Compound": name_a, "Binding": bind_a, "Solubility": sol_a, "Toxicity": tox_a, "Efficacy": a_eff, "StrokeReduction": a_red},
-            {"Compound": name_b, "Binding": bind_b, "Solubility": sol_b, "Toxicity": tox_b, "Efficacy": b_eff, "StrokeReduction": b_red},
-        ])
+        # Write data + color code
+        for _, row in df.iterrows():
+            ws.append(row.tolist())
+            eff, tox, conf = row["Efficacy"], row["Toxicity"], row["Confidence"]
+            color = "90EE90" if eff > 75 and tox < 0.3 else "FFA07A" if eff < 40 else "FFFACD"
+            for cell in ws[ws.max_row]:
+                cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
 
-        # --- 3D Visualization: Risk/Efficacy relationship ---
-        fig3d = px.scatter_3d(
-            df_cmp,
-            x="Binding", y="Solubility", z="Toxicity",
-            color="StrokeReduction", symbol="Compound", size="Efficacy",
-            color_continuous_scale="RdYlGn",  # red = higher risk, green = beneficial
-            title="3D Visualization: Compound Efficacy vs Stroke Risk Factors"
-        )
-        fig3d.update_traces(marker=dict(opacity=0.9, line=dict(width=1, color="DarkSlateGray")))
-        st.plotly_chart(fig3d, use_container_width=True)
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return buf
 
-        # --- 2D Comparison ---
-        fig2d = px.bar(df_cmp, x="Compound", y=["Efficacy", "StrokeReduction"], barmode="group",
-                       title="Compound Comparison — Efficacy and Stroke Reduction (%)")
-        st.plotly_chart(fig2d, use_container_width=True)
+    # ---------------- MANUAL COMPARISON ----------------
+    if mode == "Manual Comparison":
+        compound_options = [
+            "Aspirin", "tPA (Tissue Plasminogen Activator)", "Citicoline",
+            "Piracetam", "Memantine", "Edaravone", "Water (control)", "Experimental-X1"
+        ]
 
-        # --- Interpretation Notes ---
-        st.markdown("""
-        **Interpretation Notes:**  
-        - Compounds toward the *green zone* (high solubility, strong binding, low toxicity)  
-          are predicted to reduce stroke effects more effectively.  
-        - *Red zones* indicate unfavorable pharmacological balance.  
-        - This is an **AI surrogate heuristic**, not a pharmacological claim — use for *in-silico exploration only*.
-        """)
+        colA, colB = st.columns(2)
+        with colA:
+            st.markdown("##### Compound A")
+            name_a = st.selectbox("Select Compound A", compound_options, index=0, key="cmp_a")
+            bind_a = st.number_input("Binding Energy (A) [kcal/mol]", -20.0, 0.0, -8.0, step=0.1, key="bind_a")
+            sol_a = st.slider("Solubility (A)", 0.0, 1.0, 0.5, key="sol_a")
+            tox_a = st.slider("Toxicity (A)", 0.0, 1.0, 0.2, key="tox_a")
 
-        # --- Recommendation ---
-        better = name_a if a_eff > b_eff else name_b
-        st.success(f"🏆 Recommended Compound: **{better}** demonstrates superior modeled efficacy and stroke reduction potential.")
+        with colB:
+            st.markdown("##### Compound B")
+            name_b = st.selectbox("Select Compound B", compound_options, index=1, key="cmp_b")
+            bind_b = st.number_input("Binding Energy (B) [kcal/mol]", -20.0, 0.0, -10.0, step=0.1, key="bind_b")
+            sol_b = st.slider("Solubility (B)", 0.0, 1.0, 0.6, key="sol_b")
+            tox_b = st.slider("Toxicity (B)", 0.0, 1.0, 0.1, key="tox_b")
+
+        if st.button("Run Compound Evaluation"):
+            a_eff, a_red, a_conf, a_reasons = evaluate_compound(bind_a, sol_a, tox_a)
+            b_eff, b_red, b_conf, b_reasons = evaluate_compound(bind_b, sol_b, tox_b)
+
+            df_cmp = pd.DataFrame([
+                {"Compound": name_a, "Binding": bind_a, "Solubility": sol_a, "Toxicity": tox_a,
+                 "Efficacy": a_eff, "StrokeReduction": a_red, "Confidence": a_conf},
+                {"Compound": name_b, "Binding": bind_b, "Solubility": sol_b, "Toxicity": tox_b,
+                 "Efficacy": b_eff, "StrokeReduction": b_red, "Confidence": b_conf}
+            ])
+
+            col1, col2 = st.columns(2)
+            for (name, eff, red, conf, reasons, col) in [
+                (name_a, a_eff, a_red, a_conf, a_reasons, col1),
+                (name_b, b_eff, b_red, b_conf, b_reasons, col2)
+            ]:
+                with col:
+                    st.markdown(f"### {name}")
+                    st.metric("Efficacy Score", f"{eff}/100")
+                    st.metric("Predicted Stroke Reduction", f"{red}%")
+                    st.metric("Confidence", f"{conf}/100")
+                    if reasons:
+                        st.warning(" • " + "\n • ".join(reasons))
+
+            # --- 3D Visualization ---
+            fig3d = px.scatter_3d(
+                df_cmp, x="Binding", y="Solubility", z="Toxicity",
+                color="StrokeReduction", symbol="Compound", size="Efficacy",
+                color_continuous_scale="RdYlGn",
+                title="3D Visualization: Compound Efficacy vs Stroke Risk Factors"
+            )
+            st.plotly_chart(fig3d, use_container_width=True)
+
+            # --- 2D Visualization ---
+            fig2d = px.bar(df_cmp, x="Compound", y=["Efficacy", "StrokeReduction"], barmode="group",
+                           title="Compound Comparison — Efficacy & Stroke Reduction (%)")
+            st.plotly_chart(fig2d, use_container_width=True)
+
+            better = name_a if a_eff > b_eff else name_b
+            st.success(f"🏆 Recommended Compound: **{better}** shows superior modeled efficacy and stroke reduction potential.")
+
+            # --- Export Buttons ---
+            csv = df_cmp.to_csv(index=False).encode("utf-8")
+            excel = export_excel(df_cmp)
+            st.download_button("📥 Download Results (CSV)", csv, "compound_results.csv", "text/csv")
+            st.download_button("📘 Download Results (Excel)", excel, "compound_results.xlsx")
+
+            st.markdown("""
+            **Interpretation Notes:**  
+            - 🟢 Green = strong efficacy, low toxicity  
+            - 🔴 Red = poor efficacy or high toxicity  
+            - 🟡 Yellow = moderate confidence region  
+            - This is a research tool — interpret trends, not clinical results.
+            """)
+
+    # ---------------- BATCH UPLOAD MODE ----------------
+    else:
+        st.markdown("### Upload Compound Dataset (CSV)")
+        uploaded = st.file_uploader("Upload file", type=["csv"])
+
+        if uploaded is not None:
+            df = pd.read_csv(uploaded)
+            expected_cols = {"Compound", "Binding", "Solubility", "Toxicity"}
+            if not expected_cols.issubset(df.columns):
+                st.error(f"CSV must contain: {', '.join(expected_cols)}")
+            else:
+                def eval_row(row):
+                    eff, red, conf, _ = evaluate_compound(row["Binding"], row["Solubility"], row["Toxicity"])
+                    return pd.Series([eff, red, conf])
+                df[["Efficacy", "StrokeReduction", "Confidence"]] = df.apply(eval_row, axis=1)
+
+                st.success(f"✅ {len(df)} compounds evaluated successfully.")
+                st.dataframe(df.head())
+
+                fig3d = px.scatter_3d(
+                    df, x="Binding", y="Solubility", z="Toxicity",
+                    color="StrokeReduction", size="Efficacy",
+                    color_continuous_scale="RdYlGn",
+                    title="3D Screening: Compound Properties & Stroke Reduction Potential"
+                )
+                st.plotly_chart(fig3d, use_container_width=True)
+
+                fig2d = px.bar(df.sort_values("Efficacy", ascending=False).head(10),
+                               x="Compound", y="Efficacy", color="StrokeReduction",
+                               title="Top 10 Compounds by Efficacy (AI Surrogate)")
+                st.plotly_chart(fig2d, use_container_width=True)
+
+                st.write("### Summary Statistics")
+                st.write(df[["Efficacy", "StrokeReduction", "Confidence"]].describe().T)
+
+                best = df.loc[df["Efficacy"].idxmax()]
+                st.success(f"🏆 Best Compound: **{best['Compound']}** "
+                           f"(Efficacy {best['Efficacy']:.1f}, Stroke Reduction {best['StrokeReduction']:.1f}%)")
+
+                # --- Export Buttons ---
+                csv = df.to_csv(index=False).encode("utf-8")
+                excel = export_excel(df)
+                st.download_button("📊 Download Full Results (CSV)", csv, "batch_results.csv", "text/csv")
+                st.download_button("📘 Download Full Results (Excel)", excel, "batch_results.xlsx")
+
 
 
 
