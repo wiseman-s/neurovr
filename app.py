@@ -395,26 +395,30 @@ elif page == "Drug Discovery Lab 💊":
     color = "#4CC3D9" if p["Efficacy"] < 60 else "#7CFC00" if p["Efficacy"] < 80 else "#228B22"
     xpos = i * 1.8 - 1.8
     a_html += f"""
-      <a-box position="{xpos} 0.25 -3" depth="0.5" height="0.5" width="0.5" color="{color}"></a-box>
-      <a-text value="{p['Compound']}" align="center" position="{xpos} 1.2 -3" color="#111"></a-text>
-      <a-text value="Stroke Reduction: {p['StrokeReduction']}%" align="center" position="{xpos} 1.8 -3" color="#333"></a-text>
+      <a-box position="{xpos} 0.25 -3" depth="0.5" height="0.5" width="0.5" color="{color}">
+        <a-animation attribute="rotation" dur="8000" to="0 360 0" repeat="indefinite"></a-animation>
+      </a-box>
+      <a-text value="{p['Compound']}" look-at="[camera]" align="center"
+              position="{xpos} 2.8 -3" color="#111" scale="1.3 1.3 1.3"></a-text>
+      <a-text value="Stroke Reduction: {p['StrokeReduction']}%" look-at="[camera]" align="center"
+              position="{xpos} 2.3 -3" color="#333" scale="1.1 1.1 1.1"></a-text>
     """
 
-# ✅ Close the scene properly
-a_html += """
-  <a-camera position="0 1.6 2"></a-camera>
-</a-scene>
-"""
+    """
 
-st.markdown("### 🧠 Interactive 3D Compound Display")
-st.components.v1.html(a_html, height=500)
+                """
+            a_html += """
+              <a-camera position="0 1.6 2"></a-camera>
+            </a-scene>
+            """
+            st.markdown("### 🧠 Interactive 3D Compound Display")
+            st.components.v1.html(a_html, height=500)
 
-# --- Export ---
-csv = df_cmp.to_csv(index=False).encode("utf-8")
-excel = export_excel(df_cmp)
-st.download_button("📥 Download Results (CSV)", csv, "compound_results.csv", "text/csv")
-st.download_button("📘 Download Results (Excel)", excel, "compound_results.xlsx")
-
+            # --- Export ---
+            csv = df_cmp.to_csv(index=False).encode("utf-8")
+            excel = export_excel(df_cmp)
+            st.download_button("📥 Download Results (CSV)", csv, "compound_results.csv", "text/csv")
+            st.download_button("📘 Download Results (Excel)", excel, "compound_results.xlsx")
 
     # ---------------- Batch Upload ----------------
     else:
