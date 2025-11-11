@@ -17,7 +17,7 @@ from streamlit.components.v1 import html
 
 # --------------------------- CONFIG ---------------------------
 st.set_page_config(
-    page_title="NeuroVR Lab - Stroke Research & Drug Discovery",
+    page_title="🧠 NeuroVR Lab — VR Stroke Research & Drug Discovery",
     page_icon="🧠",
     layout="wide"
 )
@@ -461,7 +461,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align:center; color: gray; font-size: 13px;'>
-        🧠 <b>System by Simon</b> | 📧 <a href='mailto:mailio@gmail.com'>mailio@gmail.com</a><br>
+        🧠 <b>System by Simon</b> | 📧 <a href='allinmer57@gmail.com'>mailio@gmail.com</a><br>
         © 2025 NeuroVR Lab — Experimental stroke research environment.
     </div>
     """,
