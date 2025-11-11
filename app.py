@@ -276,134 +276,131 @@ elif page == "Patient Data Recorder 🧾":
 
 # --------------------------- DRUG DISCOVERY LAB ---------------------------
 elif page == "Drug Discovery Lab 💊":
-    st.subheader("Drug Discovery Lab — Professional Compound Evaluation & Comparison")
+    st.subheader("Drug Discovery Lab — AI-Guided Compound Efficacy & Risk Visualizer")
 
     st.markdown("""
-    Use this lab to compare two compounds with a biologically-informed heuristic.
-    Outputs:
-    - Efficacy Score (0–100) — internal composite metric
-    - Predicted Stroke Reduction (%) — realistic, bounded (0–50%)
-    - Confidence (0–100) — higher when properties are in drug-like ranges
+    This laboratory simulates how various compounds influence **stroke recovery potential**  
+    using heuristic bioactivity scoring. It integrates **binding energy**, **solubility**, and **toxicity**
+    into a unified model, producing 3D and 2D visuals for professional comparison.
+
+    **Research Context:**  
+    Stroke compounds often target neuroprotective pathways, clot dissolution, or vascular health.  
+    By comparing two or more compounds, NeuroVR helps researchers identify drug-like molecules
+    with optimal balance between **binding affinity**, **solubility**, and **toxicity**.
     """)
 
+    # --- Commonly studied compounds for stroke recovery ---
+    compound_options = [
+        "Aspirin",
+        "tPA (Tissue Plasminogen Activator)",
+        "Citicoline",
+        "Piracetam",
+        "Memantine",
+        "Edaravone",
+        "Water (control)",
+        "Experimental-X1"
+    ]
+
+    st.markdown("#### Select or enter compound properties below")
     colA, colB = st.columns(2)
+
     with colA:
-        st.markdown("#### Compound A")
-        name_a = st.text_input("Name (A)", "Compound A", key="name_a")
-        bind_a = st.number_input("Binding energy (A) [kcal/mol, negative stronger]", -20.0, 0.0, -8.0, step=0.1, key="bind_a")
-        sol_a = st.slider("Solubility (A) (0-1)", 0.0, 1.0, 0.5, key="sol_a")
-        tox_a = st.slider("Toxicity (A) (0-1)", 0.0, 1.0, 0.2, key="tox_a")
+        st.markdown("##### Compound A")
+        name_a = st.selectbox("Select Compound A", compound_options, index=0, key="cmp_a")
+        bind_a = st.number_input("Binding Energy (A) [kcal/mol, negative stronger]", -20.0, 0.0, -8.0, step=0.1, key="bind_a")
+        sol_a = st.slider("Solubility (A) (0–1)", 0.0, 1.0, 0.5, key="sol_a")
+        tox_a = st.slider("Toxicity (A) (0–1)", 0.0, 1.0, 0.2, key="tox_a")
 
     with colB:
-        st.markdown("#### Compound B")
-        name_b = st.text_input("Name (B)", "Compound B", key="name_b")
-        bind_b = st.number_input("Binding energy (B) [kcal/mol, negative stronger]", -20.0, 0.0, -10.0, step=0.1, key="bind_b")
-        sol_b = st.slider("Solubility (B) (0-1)", 0.0, 1.0, 0.6, key="sol_b")
-        tox_b = st.slider("Toxicity (B) (0-1)", 0.0, 1.0, 0.1, key="tox_b")
+        st.markdown("##### Compound B")
+        name_b = st.selectbox("Select Compound B", compound_options, index=1, key="cmp_b")
+        bind_b = st.number_input("Binding Energy (B) [kcal/mol, negative stronger]", -20.0, 0.0, -10.0, step=0.1, key="bind_b")
+        sol_b = st.slider("Solubility (B) (0–1)", 0.0, 1.0, 0.6, key="sol_b")
+        tox_b = st.slider("Toxicity (B) (0–1)", 0.0, 1.0, 0.1, key="tox_b")
 
     def evaluate_compound(binding, solubility, toxicity):
-        """
-        Returns:
-         - efficacy_score (0-100): composite internal metric
-         - pred_reduction (0-50): predicted stroke reduction percent (realistic bound)
-         - confidence (0-100): how trustworthy the estimate is (heuristic)
-         - reasons: list of strings describing limiting factors
-        """
-
         reasons = []
 
-        # 1) Binding strength normalization:
-        # stronger binding = more negative binding energy. We'll treat energies <= -12 as strong,
-        # -5..-12 moderate, > -5 weak. Normalize to [0,1].
-        binding_strength = ( -binding - 5 ) / (12 - 5)  # maps -5 -> 0, -12 -> 1
+        # Normalize values to biologically relevant scales
+        binding_strength = ( -binding - 5 ) / (12 - 5)
         binding_strength = np.clip(binding_strength, 0.0, 1.0)
 
-        if binding > -5:
-            reasons.append("Weak binding (binding energy > -5 kcal/mol).")
-
-        # 2) Solubility factor: prefer moderate-high solubility
         sol_factor = np.clip(solubility, 0.0, 1.0)
-        if sol_factor < 0.2:
-            reasons.append("Low solubility — absorption may be poor.")
-
-        # 3) Toxicity penalty
         tox_penalty = np.clip(toxicity, 0.0, 1.0)
+
+        if binding > -5:
+            reasons.append("Weak target binding (< -5 kcal/mol).")
+        if sol_factor < 0.25:
+            reasons.append("Low solubility — poor bioavailability expected.")
         if tox_penalty > 0.6:
-            reasons.append("High predicted toxicity — safety concerns.")
+            reasons.append("High toxicity — potential safety risk.")
 
-        # 4) Composite ADMET-like score (0..1)
-        # Give binding more weight (0.5), solubility moderate (0.3), toxicity penalty reduces result.
-        raw_score = (0.5 * binding_strength) + (0.3 * sol_factor) + (0.2 * (1 - tox_penalty))
+        # Composite “drug-likeness” surrogate score
+        raw_score = (0.55 * binding_strength) + (0.3 * sol_factor) + (0.15 * (1 - tox_penalty))
         raw_score = np.clip(raw_score, 0.0, 1.0)
+        efficacy = round(raw_score * 100, 2)
+        reduction = round(raw_score * 50, 2)
+        confidence = int(np.clip(binding_strength * 60 + sol_factor * 30 + (1 - tox_penalty) * 10, 5, 100))
 
-        # Map to efficacy_score 0-100 (internal)
-        efficacy_score = round(raw_score * 100, 2)
-
-        # Predicted stroke reduction: realistic upper bound 50% (set by domain conservatism)
-        pred_reduction = round(raw_score * 50, 2)  # 0..50%
-
-        # Confidence heuristic:
-        # High confidence if binding_strength moderate+, sol between 0.25-0.9, toxicity low
-        conf = 0.0
-        conf += binding_strength * 50
-        conf += (0.5 if (0.25 <= sol_factor <= 0.9) else 0.2) * 30
-        conf += (1 - tox_penalty) * 20
-        confidence = int(np.clip(conf, 5, 100))
-
-        # Special-case: near-zero binding_strength and very low toxicity/neutral -> likely inert (e.g., water)
+        # Handle inert materials like water
         if binding_strength < 0.05 and sol_factor > 0.4 and tox_penalty < 0.1:
-            reasons.append("Profile resembles an inert/benign substance (low binding).")
+            reasons.append("Profile matches inert or non-pharmacological substance.")
 
-        return efficacy_score, pred_reduction, confidence, reasons
+        return efficacy, reduction, confidence, reasons
 
-    if st.button("Evaluate & Compare"):
+    if st.button("Run Compound Evaluation"):
         a_eff, a_red, a_conf, a_reasons = evaluate_compound(bind_a, sol_a, tox_a)
         b_eff, b_red, b_conf, b_reasons = evaluate_compound(bind_b, sol_b, tox_b)
 
-        # Present summary
+        # Display results side-by-side
         col1, col2 = st.columns(2)
-        with col1:
-            st.markdown(f"### {name_a}")
-            st.metric("Efficacy Score", f"{a_eff}/100")
-            st.metric("Predicted Stroke Reduction", f"{a_red}% (bounded ≤50%)")
-            st.metric("Confidence", f"{a_conf}/100")
-            if a_reasons:
-                st.warning(" • " + "\n • ".join(a_reasons))
-        with col2:
-            st.markdown(f"### {name_b}")
-            st.metric("Efficacy Score", f"{b_eff}/100")
-            st.metric("Predicted Stroke Reduction", f"{b_red}% (bounded ≤50%)")
-            st.metric("Confidence", f"{b_conf}/100")
-            if b_reasons:
-                st.warning(" • " + "\n • ".join(b_reasons))
+        for (name, eff, red, conf, reasons, col) in [
+            (name_a, a_eff, a_red, a_conf, a_reasons, col1),
+            (name_b, b_eff, b_red, b_conf, b_reasons, col2)
+        ]:
+            with col:
+                st.markdown(f"### {name}")
+                st.metric("Efficacy Score", f"{eff}/100")
+                st.metric("Predicted Stroke Reduction", f"{red}%")
+                st.metric("Confidence", f"{conf}/100")
+                if reasons:
+                    st.warning(" • " + "\n • ".join(reasons))
 
-        # Comparative 3D scatter
+        # --- DataFrame for visualization ---
         df_cmp = pd.DataFrame([
-            {"Compound": name_a, "Binding": bind_a, "Solubility": sol_a, "Toxicity": tox_a, "Efficacy": a_eff, "StrokeReduction": a_red, "Confidence": a_conf},
-            {"Compound": name_b, "Binding": bind_b, "Solubility": sol_b, "Toxicity": tox_b, "Efficacy": b_eff, "StrokeReduction": b_red, "Confidence": b_conf},
+            {"Compound": name_a, "Binding": bind_a, "Solubility": sol_a, "Toxicity": tox_a, "Efficacy": a_eff, "StrokeReduction": a_red},
+            {"Compound": name_b, "Binding": bind_b, "Solubility": sol_b, "Toxicity": tox_b, "Efficacy": b_eff, "StrokeReduction": b_red},
         ])
 
+        # --- 3D Visualization: Risk/Efficacy relationship ---
         fig3d = px.scatter_3d(
             df_cmp,
             x="Binding", y="Solubility", z="Toxicity",
-            color="StrokeReduction", symbol="Compound",
-            size="Efficacy",
-            color_continuous_scale="RdYlGn_r",
-            title="Compound Comparison — Efficacy vs Properties (Stroke Reduction %)"
+            color="StrokeReduction", symbol="Compound", size="Efficacy",
+            color_continuous_scale="RdYlGn",  # red = higher risk, green = beneficial
+            title="3D Visualization: Compound Efficacy vs Stroke Risk Factors"
         )
         fig3d.update_traces(marker=dict(opacity=0.9, line=dict(width=1, color="DarkSlateGray")))
         st.plotly_chart(fig3d, use_container_width=True)
 
-        # 2D comparisons
-        st.write("### 2D Comparison")
-        st.plotly_chart(px.bar(df_cmp, x="Compound", y=["Efficacy", "StrokeReduction", "Confidence"], barmode="group"), use_container_width=True)
+        # --- 2D Comparison ---
+        fig2d = px.bar(df_cmp, x="Compound", y=["Efficacy", "StrokeReduction"], barmode="group",
+                       title="Compound Comparison — Efficacy and Stroke Reduction (%)")
+        st.plotly_chart(fig2d, use_container_width=True)
 
-        # Final recommendation message
-        if a_eff == b_eff and a_red == b_red:
-            st.info("Both compounds show similar profiles. Consider structural modification or additional in-silico testing.")
-        else:
-            better = name_a if a_eff > b_eff else name_b
-            st.success(f"Recommendation: {better} shows higher internal efficacy score based on the heuristic.")
+        # --- Interpretation Notes ---
+        st.markdown("""
+        **Interpretation Notes:**  
+        - Compounds toward the *green zone* (high solubility, strong binding, low toxicity)  
+          are predicted to reduce stroke effects more effectively.  
+        - *Red zones* indicate unfavorable pharmacological balance.  
+        - This is an **AI surrogate heuristic**, not a pharmacological claim — use for *in-silico exploration only*.
+        """)
+
+        # --- Recommendation ---
+        better = name_a if a_eff > b_eff else name_b
+        st.success(f"🏆 Recommended Compound: **{better}** demonstrates superior modeled efficacy and stroke reduction potential.")
+
 
 
 
