@@ -288,19 +288,18 @@ elif page == "Drug Discovery Lab 💊":
     import joblib
     from openpyxl import Workbook
     from openpyxl.styles import PatternFill
-
-    # --- Load or create ML surrogate model ---
     from sklearn.ensemble import RandomForestRegressor
     import numpy as np, pandas as pd
+    import plotly.express as px
 
-    # Surrogate trained on simulated data (binding, solubility, toxicity → efficacy)
+    # --- Train ML surrogate model ---
     np.random.seed(42)
     X = np.random.rand(500, 3)
     y = 0.55*(1 - X[:,0]) + 0.3*X[:,1] + 0.15*(1 - X[:,2]) + np.random.normal(0, 0.05, 500)
     surrogate = RandomForestRegressor(n_estimators=200, random_state=42)
     surrogate.fit(X, y)
 
-    # Known compounds (auto-filled data)
+    # --- Known compounds (auto-fill data) ---
     compound_data = {
         "Aspirin":        {"Binding": -8.0, "Solubility": 0.7, "Toxicity": 0.2},
         "Clopidogrel":    {"Binding": -9.0, "Solubility": 0.5, "Toxicity": 0.25},
@@ -313,9 +312,8 @@ elif page == "Drug Discovery Lab 💊":
         "Experimental-X1": {"Binding": -11.0, "Solubility": 0.4, "Toxicity": 0.3},
     }
 
-    # --- Evaluation function (ML surrogate) ---
+    # --- Evaluation function ---
     def evaluate_compound(binding, solubility, toxicity):
-        # Normalize and predict efficacy
         X_pred = np.array([[-binding/15, solubility, toxicity]])
         eff_pred = float(np.clip(surrogate.predict(X_pred)[0], 0, 1))
         efficacy = round(eff_pred * 100, 2)
@@ -375,7 +373,7 @@ elif page == "Drug Discovery Lab 💊":
                  "Efficacy": b_eff, "StrokeReduction": b_red, "Confidence": b_conf}
             ])
 
-            # Visualization
+            # --- Plotly Visualizations ---
             fig3d = px.scatter_3d(df_cmp, x="Binding", y="Solubility", z="Toxicity",
                                   color="StrokeReduction", symbol="Compound", size="Efficacy",
                                   color_continuous_scale="RdYlGn", title="3D Visualization — Compound Profiles")
@@ -388,7 +386,33 @@ elif page == "Drug Discovery Lab 💊":
             better = name_a if a_eff > b_eff else name_b
             st.success(f"🏆 Recommended Compound: **{better}** — higher surrogate efficacy score.")
 
-            # Downloads
+            # --- 3D VR-like HTML view (fixed label overlap) ---
+            a_html = """
+            <a-scene embedded vr-mode-ui="enabled: false">
+              <a-sky color="#ECECEC"></a-sky>
+              <a-entity light="type: ambient; color: #BBB"></a-entity>
+              <a-entity light="type: directional; intensity: 0.6" position="1 1 0"></a-entity>
+            """
+
+            for i, p in enumerate(df_cmp.to_dict(orient="records")):
+                eff_color = "#4CC3D9" if p["Efficacy"] < 60 else "#7CFC00" if p["Efficacy"] < 80 else "#228B22"
+                y_pos = 1.2
+                a_html += f"""
+                <a-entity position='{i*1.8 - 2} {y_pos} -3'>
+                  <a-box color="{eff_color}" depth="0.5" height="0.5" width="0.5"></a-box>
+                  <a-text value="{p['Compound']}" align="center" position="0 1.0 0" color="#111"></a-text>
+                  <a-text value="Stroke Reduction: {p['StrokeReduction']}%" align="center" position="0 0.5 0" color="#333"></a-text>
+                </a-entity>
+                """
+
+            a_html += """
+              <a-camera position="0 1.6 3"></a-camera>
+            </a-scene>
+            """
+            st.markdown("### 🧠 Interactive 3D Compound Display")
+            st.components.v1.html(a_html, height=500)
+
+            # --- Export options ---
             csv = df_cmp.to_csv(index=False).encode("utf-8")
             excel = export_excel(df_cmp)
             st.download_button("📥 Download Results (CSV)", csv, "compound_results.csv", "text/csv")
@@ -427,6 +451,7 @@ elif page == "Drug Discovery Lab 💊":
                 excel = export_excel(df)
                 st.download_button("📊 Download Full Results (CSV)", csv, "batch_results.csv", "text/csv")
                 st.download_button("📘 Download Full Results (Excel)", excel, "batch_results.xlsx")
+
 
 
 
