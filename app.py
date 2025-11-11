@@ -484,7 +484,6 @@ elif page == "VR Headset Mode 🕶️":
             {"Compound": "Edaravone", "Binding": -9.3, "Solubility": 0.9, "Toxicity": 0.22, "Efficacy": 82, "StrokeReduction": 45, "Confidence": 95},
         ])
 
-    # Build VR HTML scene
     import json
     data_json = json.dumps(df_vr.to_dict(orient="records"))
 
@@ -512,14 +511,14 @@ elif page == "VR Headset Mode 🕶️":
           const y = p.Solubility * 4.0;
           const z = p.Toxicity * 5.0 - 3.0;
           const n = Math.max(0.0, Math.min(1.0, p.StrokeReduction / 50.0));
-          const color = `rgb(${{parseInt(255*(1-n))}},${{parseInt(255*n)}},0)`;
+          const color = `rgb(${{{{parseInt(255*(1-n))}}}},${{{{parseInt(255*n)}}}},0)`;
           s.setAttribute('class','clickable');
-          s.setAttribute('position',`${{x}} ${{y}} ${{z}}`);
+          s.setAttribute('position',`${{{{x}}}} ${{{{y}}}} ${{{{z}}}}`);
           s.setAttribute('radius',0.25 + (p.Efficacy / 250.0));
           s.setAttribute('color', color);
           s.setAttribute('opacity', 0.9);
           s.addEventListener('click',()=>{
-            alert(`Compound: ${{p.Compound}}\\nBinding: ${{p.Binding}} kcal/mol\\nSolubility: ${{p.Solubility}}\\nToxicity: ${{p.Toxicity}}\\nEfficacy: ${{p.Efficacy}}\\nStroke Reduction: ${{p.StrokeReduction}}%\\nConfidence: ${{p.Confidence}}`);
+            alert(`Compound: ${{{{p.Compound}}}}\\nBinding: ${{{{p.Binding}}}} kcal/mol\\nSolubility: ${{{{p.Solubility}}}}\\nToxicity: ${{{{p.Toxicity}}}}\\nEfficacy: ${{{{p.Efficacy}}}}\\nStroke Reduction: ${{{{p.StrokeReduction}}}}%\\nConfidence: ${{{{p.Confidence}}}}`);
           });
           container.appendChild(s);
         }}
@@ -529,6 +528,7 @@ elif page == "VR Headset Mode 🕶️":
     """
 
     html(vr_html, height=900)
+
 
 
 # --------------------------- UPLOAD / RETRAIN DATASET ---------------------------
