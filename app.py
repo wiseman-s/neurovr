@@ -129,7 +129,7 @@ page = st.sidebar.radio("Go to:", [
 
 # --------------------------- HOME ---------------------------
 if page == "Home 🏠":
-    st.markdown("<h2 style='color:#1f77b4;'>🧬 Welcome to NeuroVR Lab — The Future of Stroke Research</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#1f77b4;'>🧬 NeuroVR Lab — VR Stroke Research & Drug Discovery</h2>", unsafe_allow_html=True)
     st.info(f"Current AI Model Accuracy: {acc*100:.2f}%")
 
     st.write("### Overview & Research Focus")
