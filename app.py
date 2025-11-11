@@ -279,20 +279,18 @@ elif page == "Drug Discovery Lab 💊":
     st.subheader("Drug Discovery Lab — AI-Guided Compound Efficacy & Risk Visualizer")
 
     st.markdown("""
-    This lab uses a **machine learning surrogate model** trained on known drug-like properties 
+    This lab uses a **machine learning surrogate model** trained on drug-like features  
     to simulate how compounds may affect **stroke recovery and reduction risk**.  
     Use manual mode for two-compound comparison or upload a CSV for batch screening.
     """)
 
-    import io
-    import joblib
+    import io, numpy as np, pandas as pd
     from openpyxl import Workbook
     from openpyxl.styles import PatternFill
     from sklearn.ensemble import RandomForestRegressor
-    import numpy as np, pandas as pd
     import plotly.express as px
 
-    # --- Train ML surrogate model ---
+    # --- Surrogate ML model (simple RandomForest) ---
     np.random.seed(42)
     X = np.random.rand(500, 3)
     y = 0.55*(1 - X[:,0]) + 0.3*X[:,1] + 0.15*(1 - X[:,2]) + np.random.normal(0, 0.05, 500)
@@ -301,31 +299,31 @@ elif page == "Drug Discovery Lab 💊":
 
     # --- Known compounds (auto-fill data) ---
     compound_data = {
-        "Aspirin":        {"Binding": -8.0, "Solubility": 0.7, "Toxicity": 0.2},
-        "Clopidogrel":    {"Binding": -9.0, "Solubility": 0.5, "Toxicity": 0.25},
-        "tPA (Alteplase)": {"Binding": -10.5, "Solubility": 0.6, "Toxicity": 0.35},
-        "Citicoline":     {"Binding": -7.5, "Solubility": 0.8, "Toxicity": 0.1},
-        "Edaravone":      {"Binding": -9.2, "Solubility": 0.55, "Toxicity": 0.15},
-        "Piracetam":      {"Binding": -6.5, "Solubility": 0.9, "Toxicity": 0.05},
-        "Memantine":      {"Binding": -8.8, "Solubility": 0.65, "Toxicity": 0.2},
-        "Water (control)": {"Binding": -0.5, "Solubility": 1.0, "Toxicity": 0.0},
-        "Experimental-X1": {"Binding": -11.0, "Solubility": 0.4, "Toxicity": 0.3},
+        "Aspirin":         {"Binding": -8.0,  "Solubility": 0.7,  "Toxicity": 0.2},
+        "Clopidogrel":     {"Binding": -9.0,  "Solubility": 0.5,  "Toxicity": 0.25},
+        "tPA (Alteplase)": {"Binding": -10.5, "Solubility": 0.6,  "Toxicity": 0.35},
+        "Citicoline":      {"Binding": -7.5,  "Solubility": 0.8,  "Toxicity": 0.1},
+        "Edaravone":       {"Binding": -9.2,  "Solubility": 0.55, "Toxicity": 0.15},
+        "Piracetam":       {"Binding": -6.5,  "Solubility": 0.9,  "Toxicity": 0.05},
+        "Memantine":       {"Binding": -8.8,  "Solubility": 0.65, "Toxicity": 0.2},
+        "Water (control)": {"Binding": -0.5,  "Solubility": 1.0,  "Toxicity": 0.0},
+        "Experimental-X1": {"Binding": -11.0, "Solubility": 0.4,  "Toxicity": 0.3},
     }
 
-    # --- Evaluation function ---
+    # --- Efficacy predictor ---
     def evaluate_compound(binding, solubility, toxicity):
         X_pred = np.array([[-binding/15, solubility, toxicity]])
         eff_pred = float(np.clip(surrogate.predict(X_pred)[0], 0, 1))
         efficacy = round(eff_pred * 100, 2)
         reduction = round(eff_pred * 50 + np.random.uniform(-2, 2), 2)
-        confidence = int(np.clip(70 + (eff_pred * 25), 0, 100))
+        confidence = int(np.clip(70 + eff_pred * 25, 0, 100))
         return efficacy, reduction, confidence
 
-    # --- Excel export helper ---
+    # --- Excel export ---
     def export_excel(df):
         wb = Workbook()
         ws = wb.active
-        ws.title = "Drug Discovery Results"
+        ws.title = "Results"
         ws.append(list(df.columns))
         for _, row in df.iterrows():
             ws.append(row.tolist())
@@ -333,32 +331,29 @@ elif page == "Drug Discovery Lab 💊":
             color = "90EE90" if eff > 75 and tox < 0.3 else "FFA07A" if eff < 40 else "FFFACD"
             for cell in ws[ws.max_row]:
                 cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
-        buf = io.BytesIO()
-        wb.save(buf)
-        buf.seek(0)
+        buf = io.BytesIO(); wb.save(buf); buf.seek(0)
         return buf
 
-    # --- Mode Selection ---
     mode = st.radio("Select Mode", ["Manual Comparison", "Batch Upload (CSV)"])
 
-    # ---------------- MANUAL COMPARISON ----------------
+    # ---------------- Manual Comparison ----------------
     if mode == "Manual Comparison":
         colA, colB = st.columns(2)
         with colA:
             st.markdown("##### Compound A")
-            name_a = st.selectbox("Select Compound A", list(compound_data.keys()), index=0, key="cmp_a")
+            name_a = st.selectbox("Compound A", list(compound_data.keys()), index=0, key="cmp_a")
             data_a = compound_data[name_a]
             st.caption(f"Auto-filled: Binding={data_a['Binding']}, Solubility={data_a['Solubility']}, Toxicity={data_a['Toxicity']}")
-            bind_a = st.number_input("Binding Energy (A) [kcal/mol]", -20.0, 0.0, data_a["Binding"], step=0.1)
+            bind_a = st.number_input("Binding Energy (A) [kcal/mol]", -20.0, 0.0, data_a["Binding"])
             sol_a = st.slider("Solubility (A)", 0.0, 1.0, data_a["Solubility"])
             tox_a = st.slider("Toxicity (A)", 0.0, 1.0, data_a["Toxicity"])
 
         with colB:
             st.markdown("##### Compound B")
-            name_b = st.selectbox("Select Compound B", list(compound_data.keys()), index=1, key="cmp_b")
+            name_b = st.selectbox("Compound B", list(compound_data.keys()), index=1, key="cmp_b")
             data_b = compound_data[name_b]
             st.caption(f"Auto-filled: Binding={data_b['Binding']}, Solubility={data_b['Solubility']}, Toxicity={data_b['Toxicity']}")
-            bind_b = st.number_input("Binding Energy (B) [kcal/mol]", -20.0, 0.0, data_b["Binding"], step=0.1)
+            bind_b = st.number_input("Binding Energy (B) [kcal/mol]", -20.0, 0.0, data_b["Binding"])
             sol_b = st.slider("Solubility (B)", 0.0, 1.0, data_b["Solubility"])
             tox_b = st.slider("Toxicity (B)", 0.0, 1.0, data_b["Toxicity"])
 
@@ -370,87 +365,74 @@ elif page == "Drug Discovery Lab 💊":
                 {"Compound": name_a, "Binding": bind_a, "Solubility": sol_a, "Toxicity": tox_a,
                  "Efficacy": a_eff, "StrokeReduction": a_red, "Confidence": a_conf},
                 {"Compound": name_b, "Binding": bind_b, "Solubility": sol_b, "Toxicity": tox_b,
-                 "Efficacy": b_eff, "StrokeReduction": b_red, "Confidence": b_conf}
+                 "Efficacy": b_eff, "StrokeReduction": b_red, "Confidence": b_conf},
             ])
 
-            # --- Plotly Visualizations ---
-            fig3d = px.scatter_3d(df_cmp, x="Binding", y="Solubility", z="Toxicity",
-                                  color="StrokeReduction", symbol="Compound", size="Efficacy",
-                                  color_continuous_scale="RdYlGn", title="3D Visualization — Compound Profiles")
+            # --- Plotly Charts ---
+            fig3d = px.scatter_3d(
+                df_cmp, x="Binding", y="Solubility", z="Toxicity",
+                color="StrokeReduction", size="Efficacy", symbol="Compound",
+                color_continuous_scale="RdYlGn", title="3D View — Compound Properties"
+            )
             st.plotly_chart(fig3d, use_container_width=True)
 
-            fig2d = px.bar(df_cmp, x="Compound", y=["Efficacy", "StrokeReduction"], barmode="group",
-                           title="Compound Comparison — Efficacy & Stroke Reduction (%)")
+            fig2d = px.bar(df_cmp, x="Compound", y=["Efficacy","StrokeReduction"],
+                           barmode="group", title="Efficacy vs Stroke Reduction (%)")
             st.plotly_chart(fig2d, use_container_width=True)
 
             better = name_a if a_eff > b_eff else name_b
-            st.success(f"🏆 Recommended Compound: **{better}** — higher surrogate efficacy score.")
+            st.success(f"🏆 Recommended Compound: **{better}** — higher predicted efficacy.")
 
-            # --- 3D VR-like HTML view (fixed label overlap) ---
+            # --- FIXED 3D INTERACTIVE VIEW ---
             a_html = """
-            <a-scene embedded vr-mode-ui="enabled: false">
-              <a-sky color="#ECECEC"></a-sky>
-              <a-entity light="type: ambient; color: #BBB"></a-entity>
-              <a-entity light="type: directional; intensity: 0.6" position="1 1 0"></a-entity>
+            <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+            <a-scene background="color: #ECECEC">
+              <a-entity light="type: ambient; intensity: 0.7"></a-entity>
+              <a-entity light="type: directional; position: 2 4 3; intensity: 0.8"></a-entity>
+              <a-plane rotation="-90 0 0" width="10" height="10" color="#f0f0f0"></a-plane>
             """
-
             for i, p in enumerate(df_cmp.to_dict(orient="records")):
-                eff_color = "#4CC3D9" if p["Efficacy"] < 60 else "#7CFC00" if p["Efficacy"] < 80 else "#228B22"
-                y_pos = 1.2
+                color = "#4CC3D9" if p["Efficacy"] < 60 else "#7CFC00" if p["Efficacy"] < 80 else "#228B22"
+                xpos = i * 1.8 - 1.8
                 a_html += f"""
-                <a-entity position='{i*1.8 - 2} {y_pos} -3'>
-                  <a-box color="{eff_color}" depth="0.5" height="0.5" width="0.5"></a-box>
-                  <a-text value="{p['Compound']}" align="center" position="0 1.0 0" color="#111"></a-text>
-                  <a-text value="Stroke Reduction: {p['StrokeReduction']}%" align="center" position="0 0.5 0" color="#333"></a-text>
-                </a-entity>
+                  <a-box position="{xpos} 0.25 -3" depth="0.5" height="0.5" width="0.5" color="{color}"></a-box>
+                  <a-text value="{p['Compound']}" align="center" position="{xpos} 0.9 -3" color="#111"></a-text>
+                  <a-text value="Stroke Reduction: {p['StrokeReduction']}%" align="center" position="{xpos} 0.65 -3" color="#333"></a-text>
                 """
-
             a_html += """
-              <a-camera position="0 1.6 3"></a-camera>
+              <a-camera position="0 1.6 2"></a-camera>
             </a-scene>
             """
             st.markdown("### 🧠 Interactive 3D Compound Display")
             st.components.v1.html(a_html, height=500)
 
-            # --- Export options ---
+            # --- Export ---
             csv = df_cmp.to_csv(index=False).encode("utf-8")
             excel = export_excel(df_cmp)
             st.download_button("📥 Download Results (CSV)", csv, "compound_results.csv", "text/csv")
             st.download_button("📘 Download Results (Excel)", excel, "compound_results.xlsx")
 
-    # ---------------- BATCH UPLOAD MODE ----------------
+    # ---------------- Batch Upload ----------------
     else:
         st.markdown("### Upload Compound Dataset (CSV)")
         uploaded = st.file_uploader("Upload file", type=["csv"])
-        if uploaded is not None:
+        if uploaded:
             df = pd.read_csv(uploaded)
-            expected_cols = {"Compound", "Binding", "Solubility", "Toxicity"}
-            if not expected_cols.issubset(df.columns):
-                st.error(f"CSV must contain: {', '.join(expected_cols)}")
+            required = {"Compound","Binding","Solubility","Toxicity"}
+            if not required.issubset(df.columns):
+                st.error(f"CSV must contain: {', '.join(required)}")
             else:
-                df[["Efficacy", "StrokeReduction", "Confidence"]] = df.apply(
-                    lambda r: pd.Series(evaluate_compound(r["Binding"], r["Solubility"], r["Toxicity"])),
-                    axis=1
-                )
-
+                df[["Efficacy","StrokeReduction","Confidence"]] = df.apply(
+                    lambda r: pd.Series(evaluate_compound(r["Binding"], r["Solubility"], r["Toxicity"])), axis=1)
                 st.success(f"✅ {len(df)} compounds evaluated successfully.")
                 st.dataframe(df.head())
 
                 fig3d = px.scatter_3d(df, x="Binding", y="Solubility", z="Toxicity",
                                       color="StrokeReduction", size="Efficacy",
                                       color_continuous_scale="RdYlGn",
-                                      title="3D Screening — ML Surrogate Results")
+                                      title="3D Screening — Surrogate Model")
                 st.plotly_chart(fig3d, use_container_width=True)
 
-                fig2d = px.bar(df.sort_values("Efficacy", ascending=False).head(10),
-                               x="Compound", y="Efficacy", color="StrokeReduction",
-                               title="Top 10 Compounds by Surrogate Efficacy")
-                st.plotly_chart(fig2d, use_container_width=True)
-
-                csv = df.to_csv(index=False).encode("utf-8")
-                excel = export_excel(df)
-                st.download_button("📊 Download Full Results (CSV)", csv, "batch_results.csv", "text/csv")
-                st.download_button("📘 Download Full Results (Excel)", excel, "batch_results.xlsx")
 
 
 
