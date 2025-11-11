@@ -307,7 +307,7 @@ elif page == "Drug Discovery Lab 💊":
         if tox_penalty > 0.6:
             reasons.append("High toxicity — safety concern.")
 
-        raw_score = 0.55 * binding_strength + 0.3 * sol_factor + 0.15 * (1 - tox_penalty)
+        raw_score = 0.55 * binding_strngth + 0.3 * sol_factor + 0.15 * (1 - tox_penalty)
         efficacy = round(raw_score * 100, 2)
         reduction = round(raw_score * 50, 2)
         confidence = int(np.clip(binding_strength * 60 + sol_factor * 30 + (1 - tox_penalty) * 10, 5, 100))
@@ -467,20 +467,68 @@ elif page == "Drug Discovery Lab 💊":
 
 # --------------------------- VR HEADSET MODE ---------------------------
 elif page == "VR Headset Mode 🕶️":
-    st.subheader("VR Headset Mode (Experimental)")
-    st.markdown("Open via HTTPS in a VR-capable browser for immersive exploration.")
-    
+    import streamlit.components.v1 as components
+
+    st.subheader("🧠 NeuroVR Headset Mode — Immersive Visualization")
+    st.markdown("""
+    This experimental mode enables **3D and VR visualization** of compound effects and stroke risk patterns.  
+    Open the app via **HTTPS** on a **WebXR-compatible headset** (e.g., Oculus Quest, Pico, or HoloLens) to enter full VR.
+    """)
+
     aframe_html = """
-    <a-scene embedded vr-mode-ui="enabled: true">
-        <a-sky color="#ECECEC"></a-sky>
-        <a-entity light="type: ambient; color: #BBB"></a-entity>
-        <a-entity light="type: directional; intensity: 0.6" position="1 1 0"></a-entity>
-        <a-camera position="0 1.6 0"></a-camera>
-        <a-sphere position="0 1.5 -3" radius="0.5" color="#EF2D5E"></a-sphere>
-    </a-scene>
+    <html>
+      <head>
+        <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+      </head>
+      <body>
+        <a-scene vr-mode-ui="enabled: true" embedded>
+          <!-- Background -->
+          <a-sky color="#ECECEC"></a-sky>
+
+          <!-- Lighting -->
+          <a-entity light="type: ambient; color: #BBB"></a-entity>
+          <a-entity light="type: directional; color: #FFF; intensity: 0.8" position="1 1 0"></a-entity>
+
+          <!-- Camera -->
+          <a-entity position="0 1.6 0">
+            <a-camera wasd-controls-enabled="true"></a-camera>
+          </a-entity>
+
+          <!-- Sample Drug Compounds (3D spheres) -->
+          <a-entity id="compounds">
+            <a-sphere position="-1 1.5 -3" radius="0.4" color="#EF2D5E" compound-name="Aspirin"></a-sphere>
+            <a-sphere position="0 1.5 -4" radius="0.4" color="#4CC3D9" compound-name="Citicoline"></a-sphere>
+            <a-sphere position="1 1.5 -3" radius="0.4" color="#7BC8A4" compound-name="tPA"></a-sphere>
+            <a-sphere position="0 0.8 -2.5" radius="0.3" color="#FFC65D" compound-name="Edaravone"></a-sphere>
+          </a-entity>
+
+          <!-- Labels -->
+          <a-text value="NeuroVR Lab — Compound Risk Space" color="#111" position="-1.2 2.5 -3"></a-text>
+          <a-text value="(Look around or use headset controls to explore)" color="#333" position="-1.8 2.2 -3.2" width="4"></a-text>
+
+          <!-- Animation Example -->
+          <a-animation attribute="rotation" dur="12000" to="0 360 0" repeat="indefinite"></a-animation>
+
+          <!-- Interaction Script -->
+          <script>
+            AFRAME.registerComponent('compound-info', {
+              init: function () {
+                this.el.addEventListener('click', () => {
+                  const name = this.el.getAttribute('compound-name');
+                  alert(`Compound: ${name}\\nBinding: variable\\nSolubility: variable\\nRisk: dynamic`);
+                });
+              }
+            });
+
+            // Attach info component to all compound spheres
+            document.querySelectorAll('[compound-name]').forEach(e => e.setAttribute('compound-info', ''));
+          </script>
+        </a-scene>
+      </body>
+    </html>
     """
-    
-    html(aframe_html, height=480)
+
+    components.html(aframe_html, height=600, scrolling=False)
 
 
 
